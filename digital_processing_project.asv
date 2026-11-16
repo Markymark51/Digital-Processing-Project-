@@ -1,11 +1,12 @@
 function digital_processing_project
 freq = 1;
+len = 1;
 % Create a UI figure window
 fig = uifigure('Name', 'Simple UI with Button', ...
     'Position', [100 100 400 300]);
 
 lbl = uilabel(fig, ...
-    'Text', 'Click the button!', ...
+    'Text', sprintf('Frequency: %.1f', freq), ...
     'Position', [150 200 120 30], ...
     'FontSize', 14);
 
@@ -19,16 +20,28 @@ sld = uislider(fig, ...
     'Limits', [1 1000], ...
     'Value', freq);
 
+sld2 = uislider(fig, ...
+    'Position', [150 100 100 1], ...
+    'liimits', [1 1000], ...
+    'Value', len);
+
 % Link slider movement to a callback function
-sld.ValueChangingFcn = @(src, event) updateFreq(event.Value);
+sld.ValueChangingFcn = @(src, event) updateFreq(src, event, lbl);
+
+sld2.valueChangingFcn = @(src, event) updateLen(src, event, lbl);
 
 % Assign callback function to button
 btn.ButtonPushedFcn = @(src, event) buttonCallback(sld.Value);
 end
 
-function updateFreq(freq)
+function updateFreq(src, event, label)
+currentVal = event.Value;
+label.Text = sprintf("Frequency: %.1f", currentVal);
+end
 
-
+function updateLen(src, event, label)
+currentVal = event.Value;
+label.Text = sprintf("Length: %.1f", currentVal);
 end
 
 % Callback function for button press
