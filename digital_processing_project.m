@@ -10,7 +10,7 @@ fig = uifigure('Name', 'Digital Processing Project', ...
 lblPanel = uipanel(fig, 'Position', [0 200 120 400], 'BackgroundColor', 'black');
 sliderPanel = uipanel(fig, 'Position', [120 200 750 400], 'BackgroundColor', 'black');
 
-lblgrid = uigridlayout(lblPanel, [4 1]);
+lblgrid = uigridlayout(lblPanel, [5 1]);
 slidergrid = uigridlayout(sliderPanel, [4 1]);
 
 frequencyLbl = uilabel(lblgrid, ...
@@ -31,6 +31,10 @@ bitsLbl = uilabel(lblgrid, ...
 
 lengthLbl = uilabel(lblgrid, ...
     'Text', sprintf('Length:\n %.1f', len), ...
+    'FontSize', 14);
+
+waveTypeLbl = uilabel(lblgrid, ...
+    'Text', sprintf('Wave Type:'), ...
     'FontSize', 14);
 
 frequencySlider = uislider(slidergrid, ...
@@ -59,6 +63,12 @@ lengthSlider = uislider(slidergrid, ...
     'Step', 0.1, ...
     'Value', len);
 
+wavetypeDropdown = uidropdown(slidergrid, ...
+    'Position', [280 125 130 30], ...
+    'Items', {'Sine', 'Square', 'Sawtooth'}, ...
+    'Value', 'Sine', ...
+    'FontSize', 14);
+
 playSoundButton = uibutton(fig, 'push', ...
     'Text', 'Play Sound', ...
     'Position', [150 120 100 40], ...
@@ -83,13 +93,15 @@ playSoundButton.ButtonPushedFcn = @(src, event) playSound( ...
     (10 ^ frequencySlider.Value), ...
     lengthSlider.Value, ...
     bitsSlider.Value, ...
-    samplingFrequencySlider.Value);
+    samplingFrequencySlider.Value, ...
+    wavetypeDropdown.Value);
 
 downloadSoundButton.ButtonPushedFcn = @(src, event) downloadSound( ...
     (10 ^ frequencySlider.Value), ...
     lengthSlider.Value, ...
     bitsSlider.Value, ...
-    samplingFrequencySlider.Value);
+    samplingFrequencySlider.Value, ...
+    wavetypeDropdown.Value);
 end
 
 function updateFreq(~, event, label)
@@ -113,24 +125,34 @@ label.Text = sprintf("sampling frequency:\n %.1f", currentVal);
 end
 
 % Callback function for button press
-function playSound(freq, len, bits, fs)
+function playSound(freq, len, bits, fs, waveType)
 
-finalSound = makeSound(freq, len, bits, fs);
+finalSound = makeSound(freq, len, bits, fs, waveType);
 
 sound(finalSound, fs);
 end
 
-function downloadSound(freq, len, bits, fs)
+function downloadSound(freq, len, bits, fs, waveType)
 
-finalSound = makeSound(freq, len, bits, fs);
+finalSound = makeSound(freq, len, bits, fs, waveType);
 
 audiowrite('sound.wav', finalSound, fs, 'BitsPerSample', bits);
 end
 
-function resultSound = makeSound(freq, len, bits, fs)
+function resultSound = makeSound(freq, len, bits, fs, waveType)
 t = 0:1/fs:len; 
 
-tone = sin(2*pi*freq*t);
+switch waveType
+    case 'Sine'
+        tone = sin(2 * pi * freq * t);
+
+    case 'Square'
+    
+        tone = square(2*pi*freq*t);
+
+    case 'Sawtooth'
+        tone = sawtooth(2*pi*freq*t);
+end
 
 tone = tanh(3 * tone) / tanh(3);
 
