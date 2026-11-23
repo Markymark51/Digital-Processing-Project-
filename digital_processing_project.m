@@ -1,9 +1,11 @@
 function digital_processing_project
-freq = 20;
+freq = 440;
 fs = 44100;
 len = 1.0;
 bits = 16;
 amp = 0.5;
+cutoff = fs/2 - 1;
+order = 1000;
 % Create a UI figure window
 fig = uifigure('Name', 'Digital Processing Project', ...
     'Position', [100 100 900 600]);
@@ -36,6 +38,14 @@ lengthLbl = uilabel(lblgrid, ...
 
 ampLbl = uilabel(lblgrid, ...
     'Text', sprintf('Amplitude:\n %.1f', amp), ...
+    'FontSize', 14);
+
+cutoffLbl = uilabel(lblgrid, ...
+    'Text', sprintf('LPF Cutoff:\n %.1f', cutoff), ...
+    'FontSize', 14);
+
+orderLbl = uilabel(lblgrid, ...
+    'Text', sprintf('K:\n %i', order), ...
     'FontSize', 14);
 
 waveTypeLbl = uilabel(lblgrid, ...
@@ -74,6 +84,18 @@ ampSlider = uislider(slidergrid, ...
     'Step', 0.1, ...
     'Value', amp);
 
+cutoffSlider = uislider(slidergrid, ...
+    'Position', [150 -20 100 1], ...
+    'limits', [0 fs/2], ...
+    'Step', 0.1, ...
+    'Value', cutoff);
+
+orderSlider = uislider(slidergrid, ...
+    'Position', [150 -20 100 1], ...
+    'limits', [1 3000], ...
+    'Step', 1, ...
+    'Value', order);
+
 wavetypeDropdown = uidropdown(slidergrid, ...
     'Position', [280 125 130 30], ...
     'Items', {'Sine', 'Square', 'Sawtooth'}, ...
@@ -101,11 +123,17 @@ lengthSlider.ValueChangingFcn = @(src, event) updateLen(src, event, lengthLbl);
 
 ampSlider.ValueChangingFcn = @(src, event) updateAmp(src, event, ampLbl);
 
+cutoffSlider.ValueChangingFcn = @(src, event) updateCutoff(src, event, cutoffLbl);
+
+orderSlider.ValueChangingFcn = @(src, event) updateOrder(src, event, orderLbl);
+
 % Assign callback function to button
 playSoundButton.ButtonPushedFcn = @(src, event) playSound( ...
     (10 ^ frequencySlider.Value), ...
     lengthSlider.Value, ...
     ampSlider.Value, ...
+    cutoffSlider.Value, ...
+    orderSlider.Value, ...
     bitsSlider.Value, ...
     samplingFrequencySlider.Value, ...
     wavetypeDropdown.Value);
@@ -114,6 +142,8 @@ downloadSoundButton.ButtonPushedFcn = @(src, event) downloadSound( ...
     (10 ^ frequencySlider.Value), ...
     lengthSlider.Value, ...
     ampSlider.Value, ...
+    cutoffSlider.Value, ...
+    orderSlider.Value, ...
     bitsSlider.Value, ...
     samplingFrequencySlider.Value, ...
     wavetypeDropdown.Value);
@@ -134,6 +164,16 @@ currentVal = event.Value;
 label.Text = sprintf("Amplitude:\n %.1f", currentVal);
 end
 
+function updateCutoff(~, event, label)
+currentVal = event.Value;
+label.Text = sprintf("LPF Cutoff:\n %.1f", currentVal);
+end
+
+function updateOrder(~, event, label)
+currentVal = event.Value;
+label.Text = sprintf("K:\n %.1f", currentVal);
+end
+
 function updatebits(~, event, label)
 currentVal = round(event.Value);
 label.Text = sprintf("Bits per Sample:\n %i", currentVal);
@@ -145,21 +185,21 @@ label.Text = sprintf("sampling frequency:\n %.1f", currentVal);
 end
 
 % Callback function for button press
-function playSound(freq, len, amp, bits, fs, waveType)
+function playSound(freq, len, amp, cutoff, order, bits, fs, waveType)
 
-finalSound = makeSound(freq, len, amp, bits, fs, waveType);
+finalSound = makeSound(freq, len, amp, cutoff, order, bits, fs, waveType);
 
 sound(finalSound, fs);
 end
 
-function downloadSound(freq, len, amp, bits, fs, waveType)
+function downloadSound(freq, len, amp, cutoff, order, bits, fs, waveType)
 
-finalSound = makeSound(freq, len, amp, bits, fs, waveType);
+finalSound = makeSound(freq, len, amp, cutoff, order, bits, fs, waveType);
 
 audiowrite('sound.wav', finalSound, fs, 'BitsPerSample', bits);
 end
 
-function resultSound = makeSound(freq, len, amp, bits, fs, waveType)
+function resultSound = makeSound(freq, len, amp, cutoff, order, bits, fs, waveType)
 t = 0:1/fs:len; 
 
 switch waveType
@@ -177,6 +217,12 @@ end
 tone = tanh(3 * tone) / tanh(3);
 
 tone = tone * amp;
+
+order = floor(order * fs / cutoff);
+hw_hann = fir1(order, cutoff/(fs/2), "low", hann(order+1));
+
+
+tone = conv(tone, hw_hann);
 
 n = min(round(0.025 * fs), floor(length(tone)/2)); % Fade length (100 samples, safe for short tones)
 fade_in  = linspace(0, 1, n);
